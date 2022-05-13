@@ -94,31 +94,31 @@ void CABACDecoder::decodeSideinfo( std::vector<uint32_t>* pDimensions, float32_t
   stepsize = uiTf.f;
 }
 
-void CABACDecoder::decodeWeights( int8_t* pWeights, uint32_t numWeights )
+void CABACDecoder::decodeWeights( int8_t* pWeights, uint32_t numWeights, uint8_t bits_weight_ints )
 {
     m_CtxModeler.resetNeighborCtx();
     for (uint32_t posInMat = 0; posInMat < numWeights; posInMat++)
     {
         pWeights[posInMat] = 0;
         int32_t temp_data = 0;
-        decodeWeightVal( temp_data );
+        decodeWeightVal( temp_data, bits_weight_ints );
         pWeights[ posInMat ] = static_cast<int8_t>(temp_data);
         m_CtxModeler.updateNeighborCtx(pWeights[ posInMat ], posInMat, numWeights);
     }
 }
 
-void CABACDecoder::decodeWeights( int32_t* pWeights, uint32_t layerWidth, uint32_t numWeights )
+void CABACDecoder::decodeWeights( int32_t* pWeights, uint32_t layerWidth, uint32_t numWeights, uint8_t bits_weight_ints )
 {
     m_CtxModeler.resetNeighborCtx();
     for (uint32_t posInMat = 0; posInMat < numWeights; posInMat++)
     {
         pWeights[posInMat] = 0;
-        decodeWeightVal( pWeights[ posInMat ] );
+        decodeWeightVal( pWeights[ posInMat ], bits_weight_ints );
         m_CtxModeler.updateNeighborCtx(pWeights[ posInMat ], posInMat, layerWidth);
     }
 }
 
-void CABACDecoder::decodeWeightVal( int32_t& decodedIntVal )
+void CABACDecoder::decodeWeightVal( int32_t& decodedIntVal, uint8_t bits_weight_ints )
 {
     int32_t sigctx = m_CtxModeler.getSigCtxId();
     uint32_t sigFlag = m_BinDecoder.decodeBin(m_CtxStore[ sigctx ]);
@@ -127,8 +127,8 @@ void CABACDecoder::decodeWeightVal( int32_t& decodedIntVal )
     {
         decodedIntVal++;
         uint32_t signFlag = 0;
-        uint32_t maxAbsPositive = (1 << (BITS_WEIGHT_INTS - 1)) - 1;
-        uint32_t maxAbsNegative = (1 << (BITS_WEIGHT_INTS - 1));
+        uint32_t maxAbsPositive = (1 << (bits_weight_ints - 1)) - 1;
+        uint32_t maxAbsNegative = (1 << (bits_weight_ints - 1));
 
         if (maxAbsNegative == 0 || maxAbsPositive == 0)
         {
