@@ -65,17 +65,17 @@ public:
     void      initCtxMdls             ();
 
     void      encodeSideinfo          ( float32_t stepsize, py::array_t<float32_t, py::array::c_style> Weights );
-    void      encodeWeightsRD         ( float32_t* pWeights, float32_t* pIntervals, float32_t stepsize, float32_t lambda, uint32_t layerWidth, uint32_t numWeights );
-    void      encodeWeightsRD         ( float32_t* pWeights, float32_t   Interval,  float32_t stepsize, float32_t lambda, uint32_t layerWidth, uint32_t numWeights );
-    void      encodeWeightsRD         ( int8_t *pWeights, uint32_t numWeights);
+    void      encodeWeightsRD         ( float32_t* pWeights, float32_t* pIntervals, float32_t stepsize, float32_t lambda, uint32_t layerWidth, uint32_t numWeights, uint8_t bits_weight_ints = 32 );
+    void      encodeWeightsRD         ( float32_t* pWeights, float32_t   Interval,  float32_t stepsize, float32_t lambda, uint32_t layerWidth, uint32_t numWeights, uint8_t bits_weight_ints = 32 );
+    void      encodeWeightsRD         ( int8_t *pWeights, uint32_t numWeights, uint8_t bits_weight_ints = 8 );
 
 
 
 protected:
-    float32_t estimateAndDecideWeight ( int32_t& bestWeightInt, float32_t origWeight, float32_t weightInterval, float32_t stepsize, float32_t lambda, bool newNorm = false );
+    float32_t estimateAndDecideWeight ( int32_t& bestWeightInt, float32_t origWeight, float32_t weightInterval, float32_t stepsize, float32_t lambda, bool newNorm = false, uint8_t bits_weight_ints = 32 );
 
-    uint64_t  estimateWeightVal       ( int32_t weightInt );
-    void      encodeWeightVal         ( int32_t weightInt );
+    uint64_t  estimateWeightVal       ( int32_t weightInt, uint8_t bits_weight_ints = 32 );
+    void      encodeWeightVal         ( int32_t weightInt, uint8_t bits_weight_ints = 32 );
 private:
     std::vector<SBMPCtx> m_CtxStore;
     ContextModeler       m_CtxModeler;

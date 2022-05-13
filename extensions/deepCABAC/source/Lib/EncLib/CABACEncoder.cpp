@@ -71,7 +71,7 @@ void CABACEncoder::terminateCabacEncoding()
     m_BinEncoder.finish();
 }
 
-uint64_t CABACEncoder::estimateWeightVal( int32_t weightInt )
+uint64_t CABACEncoder::estimateWeightVal( int32_t weightInt, uint8_t bits_weight_ints )
 {
     m_BitEstimator.resetBitCounter();
 
@@ -83,8 +83,8 @@ uint64_t CABACEncoder::estimateWeightVal( int32_t weightInt )
     if (sigFlag)
     {
         uint32_t signFlag = weightInt < 0 ? 1 : 0;
-        uint32_t maxAbsPositive = (1 << (BITS_WEIGHT_INTS-1)) - 1;
-        uint32_t maxAbsNegative = (1 << (BITS_WEIGHT_INTS-1));
+        uint32_t maxAbsPositive = (1 << (bits_weight_ints-1)) - 1;
+        uint32_t maxAbsNegative = (1 << (bits_weight_ints-1));
 
         if (maxAbsNegative != 0 && maxAbsPositive != 0)
         {
@@ -122,12 +122,12 @@ uint64_t CABACEncoder::estimateWeightVal( int32_t weightInt )
     return ( m_BitEstimator.getBitCounter() );
 }
 
-void  CABACEncoder::encodeWeightVal( int32_t weightInt )
+void  CABACEncoder::encodeWeightVal( int32_t weightInt, uint8_t bits_weight_ints )
 {
-    uint32_t maxAbsPositive = (1 << (BITS_WEIGHT_INTS - 1)) - 1;
-    uint32_t maxAbsNegative = (1 << (BITS_WEIGHT_INTS - 1));
+    uint32_t maxAbsPositive = (1 << (bits_weight_ints - 1)) - 1;
+    uint32_t maxAbsNegative = (1 << (bits_weight_ints - 1));
 
-    CHECK( !( weightInt >= -(int32_t(maxAbsNegative)) ) || !( weightInt <= int32_t(maxAbsPositive) ) , printf("Value to encode %i  exceeds %i bits (stepsize is too small)!", weightInt,  BITS_WEIGHT_INTS))
+    CHECK( !( weightInt >= -(int32_t(maxAbsNegative)) ) || !( weightInt <= int32_t(maxAbsPositive) ) , printf("Value to encode %i  exceeds %i bits (stepsize is too small)!", weightInt,  bits_weight_ints))
 
     uint32_t sigFlag = weightInt != 0 ? 1 : 0;
     int32_t sigctx = m_CtxModeler.getSigCtxId();
@@ -173,7 +173,7 @@ void  CABACEncoder::encodeWeightVal( int32_t weightInt )
     }
 }
 
-float32_t CABACEncoder::estimateAndDecideWeight( int32_t& bestWeightInt, float32_t origWeight, float32_t weightInterval, float32_t stepsize, float32_t lambda, bool newNorm )
+float32_t CABACEncoder::estimateAndDecideWeight( int32_t& bestWeightInt, float32_t origWeight, float32_t weightInterval, float32_t stepsize, float32_t lambda, bool newNorm, uint8_t bits_weight_ints )
 {
     float32_t bestDist   = 0.0;
     float32_t bitrate    = 0.0;
@@ -194,7 +194,7 @@ float32_t CABACEncoder::estimateAndDecideWeight( int32_t& bestWeightInt, float32
 
     float32_t normInterval = newNorm ? 6*stepsize : weightInterval;
 
-    for (int i = 0; (i + intWeight) >= -(1 << (BITS_WEIGHT_INTS-1)); i--)
+    for (int i = 0; (i + intWeight) >= -(1 << (bits_weight_ints-1)); i--)
     {
         if( (intWeight + i)*stepsize < lowerBound && !newNorm )
         {
@@ -205,7 +205,7 @@ float32_t CABACEncoder::estimateAndDecideWeight( int32_t& bestWeightInt, float32
           break;
         }
 
-        bitrate = estimateWeightVal(intWeight + i) * oneOver2_15;
+        bitrate = estimateWeightVal(intWeight + i, bits_weight_ints) * oneOver2_15;
         diff = (origWeight - ((intWeight + i)*stepsize)) / (normInterval*(float32_t)0.5);
         distortion = (diff * diff);
 
@@ -220,7 +220,7 @@ float32_t CABACEncoder::estimateAndDecideWeight( int32_t& bestWeightInt, float32
         }
     }
 
-    for (int i = 1; (i + intWeight) < (1 << (BITS_WEIGHT_INTS-1)); i++)
+    for (int i = 1; (i + intWeight) < (1 << (bits_weight_ints-1)); i++)
     {
         if ( (intWeight + i)*stepsize > upperBound && !newNorm )
         {
@@ -231,7 +231,7 @@ float32_t CABACEncoder::estimateAndDecideWeight( int32_t& bestWeightInt, float32
           break;
         }
 
-        bitrate = estimateWeightVal(intWeight + i ) * oneOver2_15;
+        bitrate = estimateWeightVal(intWeight + i, bits_weight_ints) * oneOver2_15;
         diff = (origWeight - ((intWeight + i)*stepsize)) / (normInterval*(float32_t)0.5);
         distortion = (diff * diff);
 
@@ -269,7 +269,7 @@ void CABACEncoder::encodeSideinfo( float32_t stepsize, py::array_t<float32_t, py
   m_BinEncoder.encodeBinsEP((fTui.ui >> 16), 16);
 }
 
-void CABACEncoder::encodeWeightsRD( float32_t* pWeights, float32_t* pIntervals, float32_t stepsize, float32_t lambda, uint32_t layerWidth, uint32_t numWeights )
+void CABACEncoder::encodeWeightsRD( float32_t* pWeights, float32_t* pIntervals, float32_t stepsize, float32_t lambda, uint32_t layerWidth, uint32_t numWeights, uint8_t bits_weight_ints )
 {
   int32_t bestIntVal = 0;
   double distSum     = 0.0;
@@ -277,13 +277,13 @@ void CABACEncoder::encodeWeightsRD( float32_t* pWeights, float32_t* pIntervals, 
   for (uint32_t posInMat = 0; posInMat < numWeights; posInMat++)
   {
     bestIntVal = 0;
-    distSum += estimateAndDecideWeight( bestIntVal, pWeights[ posInMat ], pIntervals[ posInMat ], stepsize, lambda );
-    encodeWeightVal( bestIntVal );
+    distSum += estimateAndDecideWeight( bestIntVal, pWeights[ posInMat ], pIntervals[ posInMat ], stepsize, lambda, bits_weight_ints );
+    encodeWeightVal( bestIntVal, bits_weight_ints );
     m_CtxModeler.updateNeighborCtx( bestIntVal, posInMat, layerWidth );
   }
 }
 
-void CABACEncoder::encodeWeightsRD( float32_t* pWeights, float32_t Interval, float32_t stepsize, float32_t lambda, uint32_t layerWidth, uint32_t numWeights )
+void CABACEncoder::encodeWeightsRD( float32_t* pWeights, float32_t Interval, float32_t stepsize, float32_t lambda, uint32_t layerWidth, uint32_t numWeights, uint8_t bits_weight_ints )
 {
   int32_t bestIntVal = 0;
   double distSum     = 0.0;
@@ -292,13 +292,13 @@ void CABACEncoder::encodeWeightsRD( float32_t* pWeights, float32_t Interval, flo
   for (uint32_t posInMat = 0; posInMat < numWeights; posInMat++)
   {
     bestIntVal = 0;
-    distSum += estimateAndDecideWeight( bestIntVal, pWeights[ posInMat ], Interval, stepsize, lambda );
-    encodeWeightVal( bestIntVal );
+    distSum += estimateAndDecideWeight( bestIntVal, pWeights[ posInMat ], Interval, stepsize, lambda, bits_weight_ints );
+    encodeWeightVal( bestIntVal, bits_weight_ints );
     m_CtxModeler.updateNeighborCtx( bestIntVal, posInMat, layerWidth );
   }
 }
 
-void CABACEncoder::encodeWeightsRD(int8_t *pWeights, uint32_t numWeights)
+void CABACEncoder::encodeWeightsRD( int8_t *pWeights, uint32_t numWeights, uint8_t bits_weight_ints )
 {
     int32_t bestIntVal = 0;
     double distSum = 0.0;
@@ -307,7 +307,7 @@ void CABACEncoder::encodeWeightsRD(int8_t *pWeights, uint32_t numWeights)
     for (uint32_t posInMat = 0; posInMat < numWeights; posInMat++)
     {
         bestIntVal = static_cast<int32_t>(pWeights[posInMat]);
-        encodeWeightVal(bestIntVal);
+        encodeWeightVal(bestIntVal, bits_weight_ints);
         m_CtxModeler.updateNeighborCtx(bestIntVal, posInMat, numWeights);
     }
 }

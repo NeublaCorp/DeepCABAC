@@ -57,9 +57,9 @@ public:
 
     void decodeStepsize         ( float32_t &stepsize );
     void decodeSideinfo         ( std::vector<uint32_t>* pDimensions, float32_t& stepsize   );
-    void decodeWeights          ( int32_t* pWeights, uint32_t layerWidth, uint32_t numWeights );
-    void decodeWeights          ( int8_t* pWeights, uint32_t numWeights );
-    void decodeWeightVal        ( int32_t& decodedIntVal );
+    void decodeWeights          ( int32_t* pWeights, uint32_t layerWidth, uint32_t numWeights, uint8_t bits_weight_ints = 32 );
+    void decodeWeights          ( int8_t* pWeights, uint32_t numWeights, uint8_t bits_weight_size = 8 );
+    void decodeWeightVal        ( int32_t& decodedIntVal, uint8_t bits_weight_size = 32 );
 
     uint32_t getBytesRead();
     uint32_t terminateCabacDecoding ();
